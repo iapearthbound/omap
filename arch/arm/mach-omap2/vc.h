@@ -141,9 +141,11 @@ extern struct omap_vc_channel omap4_vc_core;
 void omap_vc_init_channel(struct voltagedomain *voltdm);
 int omap_vc_pre_scale(struct voltagedomain *voltdm,
 		      unsigned long target_volt,
+		      struct omap_volt_data *target_vdata,
 		      u8 *target_vsel, u8 *current_vsel);
 void omap_vc_post_scale(struct voltagedomain *voltdm,
 			unsigned long target_volt,
+			struct omap_volt_data *target_vdata,
 			u8 target_vsel, u8 current_vsel);
 
 /* Auto transition flags for users */
@@ -155,7 +157,7 @@ void omap_vc_post_scale(struct voltagedomain *voltdm,
 #define OMAP_VC_CHANNEL_AUTO_TRANSITION_UNSUPPORTED	0xff
 int omap_vc_set_auto_trans(struct voltagedomain *voltdm, u8 flag);
 int omap_vc_bypass_scale_voltage(struct voltagedomain *voltdm,
-				 unsigned long target_volt);
+				 struct omap_volt_data *target_volt);
 int omap_vc_bypass_send_i2c_msg(struct voltagedomain *voltdm,
 		u8 slave_addr, u8 reg_addr, u8 data);
 #endif

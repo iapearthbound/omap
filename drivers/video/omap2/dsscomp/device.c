@@ -173,7 +173,7 @@ static long sync_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	void __user *ptr = (void __user *)arg;
 
 	switch (cmd) {
-	case DSSCOMP_WAIT:
+	case DSSCIOC_WAIT:
 	{
 		struct dsscomp_wait_data wd;
 		r = copy_from_user(&wd, ptr, sizeof(wd)) ? :
@@ -424,7 +424,7 @@ static long comp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	dsscomp_gralloc_init(cdev);
 
 	switch (cmd) {
-	case DSSCOMP_SETUP_MGR:
+	case DSSCIOC_SETUP_MGR:
 	{
 		r = copy_from_user(&u.m.set, ptr, sizeof(u.m.set)) ? :
 		    u.m.set.num_ovls >= ARRAY_SIZE(u.m.ovl) ? -EINVAL :
@@ -434,19 +434,28 @@ static long comp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		    setup_mgr(cdev, &u.m.set);
 		break;
 	}
-	case DSSCOMP_SETUP_DISPC:
+	case DSSCIOC_SETUP_DISPC:
 	{
 		r = copy_from_user(&u.dispc, ptr, sizeof(u.dispc)) ? :
 		    dsscomp_gralloc_queue_ioctl(&u.dispc);
 		break;
 	}
-	case DSSCOMP_QUERY_DISPLAY:
+	case DSSCIOC_QUERY_DISPLAY:
 	{
 		struct dsscomp_display_info *dis = NULL;
 		r = copy_from_user(&u.dis, ptr, sizeof(u.dis));
-		if (!r)
+		if (!r) {
+			/* impose a safe limit on modedb_len to prevent
+			 * wrap around/overflow calculation of the alloced
+			 * size that would make it smaller than
+			 * struct dsscomp_display_info and cause heap
+			 * corruption.
+			 */
+			u.dis.modedb_len = clamp_val(u.dis.modedb_len, 0, 256);
+
 			dis = kzalloc(sizeof(*dis->modedb) * u.dis.modedb_len +
 						sizeof(*dis), GFP_KERNEL);
+		}
 		if (dis) {
 			*dis = u.dis;
 			r = query_display(cdev, dis) ? :
@@ -458,13 +467,13 @@ static long comp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	}
-	case DSSCOMP_CHECK_OVL:
+	case DSSCIOC_CHECK_OVL:
 	{
 		r = copy_from_user(&u.chk, ptr, sizeof(u.chk)) ? :
 		    check_ovl(cdev, &u.chk);
 		break;
 	}
-	case DSSCOMP_SETUP_DISPLAY:
+	case DSSCIOC_SETUP_DISPLAY:
 	{
 		r = copy_from_user(&u.sdis, ptr, sizeof(u.sdis)) ? :
 		    setup_display(cdev, &u.sdis);

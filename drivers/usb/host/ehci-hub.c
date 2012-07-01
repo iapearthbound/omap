@@ -602,6 +602,13 @@ static int check_reset_complete (
 			return port_status;
 		}
 
+		if (ehci->no_companion_port_handoff) {
+			/* on omap, we can't hand off companion port */
+			ehci_dbg(ehci, "port %d FS device detected - cannot handoff port\n",
+				index + 1);
+			return port_status;
+		}
+
 		ehci_dbg (ehci, "port %d full speed --> companion\n",
 			index + 1);
 
@@ -1269,7 +1276,19 @@ static int ehci_hub_control (
 			if (!selector || selector > 5)
 				goto error;
 			ehci_quiesce(ehci);
+
+			/* Put all enabled ports into suspend */
+			while (ports--) {
+				u32 __iomem *sreg =
+						&ehci->regs->port_status[ports];
+
+				temp = ehci_readl(ehci, sreg) & ~PORT_RWC_BITS;
+				if (temp & PORT_PE)
+					ehci_writel(ehci, temp | PORT_SUSPEND,
+							sreg);
+			}
 			ehci_halt(ehci);
+			temp = ehci_readl(ehci, status_reg);
 			temp |= selector << 16;
 			ehci_writel(ehci, temp, status_reg);
 			break;

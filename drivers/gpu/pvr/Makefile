@@ -23,6 +23,7 @@ ccflags-y += \
 	-DSUPPORT_LARGE_GENERAL_HEAP \
 	-DPVR_NO_OMAP_TIMER \
 	-DSYS_SUPPORTS_SGX_IDLE_CALLBACK \
+	-DPVRSRV_REFCOUNT_DEBUG \
 	-Idrivers/gpu/pvr/sgx
 
 ccflags-$(CONFIG_PVR_SGXCORE_540) += \
@@ -59,6 +60,10 @@ ccflags-$(CONFIG_PVR_DUMP_MK_TRACE) += -DPVRSRV_DUMP_MK_TRACE
 ccflags-$(CONFIG_PVR_PDUMP) += \
 	-DPDUMP -DSUPPORT_DBGDRV_EVENT_OBJECTS -DSUPPORT_PDUMP_MULTI_PROCESS
 
+ccflags-$(CONFIG_PVR_LINUX_MEM_AREA_POOL) += \
+	-DPVR_LINUX_MEM_AREA_POOL_MAX_PAGES=CONFIG_PVR_LINUX_MEM_AREA_POOL_MAX_PAGES \
+	-DPVR_LINUX_MEM_AREA_USE_VMAP -DPVR_LINUX_MEM_AREA_POOL_ALLOW_SHRINK
+
 pvrsrvkm-y := \
 	osfunc.o \
 	mutils.o \
@@ -89,6 +94,7 @@ pvrsrvkm-y := \
 	bridged_pvr_bridge.o \
 	perproc.o \
 	lists.o \
+	refcount.o \
 	omap4/sysconfig.o \
 	omap4/sysutils.o \
 	sgx/bridged_sgx_bridge.o \

@@ -36,6 +36,8 @@
 #include "linkage.h"
 #include "pvr_bridge_km.h"
 #include "pvr_uaccess.h"
+#include "refcount.h"
+#include "buffer_manager.h"
 
 #if defined(SUPPORT_DRI_DRM)
 #include <drm/drmP.h>
@@ -381,12 +383,19 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 			PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *psExportDeviceMemOUT =
 				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)psBridgePackageKM->pvParamOut;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			IMG_HANDLE hMemInfo;
 			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+
+			if (pvr_get_user(hMemInfo, &psExportDeviceMemOUT->hMemInfo) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
 
 			
 			if(PVRSRVLookupHandle(KERNEL_HANDLE_BASE,
 								  (IMG_PVOID *)&psKernelMemInfo,
-								  psExportDeviceMemOUT->hMemInfo,
+								  hMemInfo,
 								  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
 			{
 				PVR_DPF((PVR_DBG_ERROR, "%s: Failed to look up export handle", __FUNCTION__));
@@ -395,9 +404,15 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 			}
 
 			
-			psKernelMemInfo->ui32RefCount++;
+			PVRSRVKernelMemInfoIncRef(psKernelMemInfo);
 
-			psPrivateData->hKernelMemInfo = psExportDeviceMemOUT->hMemInfo;
+			
+			if (psKernelMemInfo->sShareMemWorkaround.bInUse)
+			{
+				BM_XProcIndexAcquire(psKernelMemInfo->sShareMemWorkaround.ui32ShareIndex);
+			}
+
+			psPrivateData->hKernelMemInfo = hMemInfo;
 #if defined(SUPPORT_MEMINFO_IDS)
 			psPrivateData->ui64Stamp = ++ui64Stamp;
 

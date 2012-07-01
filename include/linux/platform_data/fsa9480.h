@@ -30,12 +30,18 @@
 #define FSA9480_DETECT_CHARGER			(1 << 2)
 #define FSA9480_DETECT_JIG			(1 << 3)
 #define FSA9480_DETECT_UART			(1 << 4)
+#define FSA9480_DETECT_AV_365K			(1 << 5)
+#define FSA9480_DETECT_AV_365K_CHARGER		(1 << 6)
+#define FSA9480_DETECT_AV_POWERED		(1 << 7)
 
-#define FSA9480_DETECT_ALL			(FSA9480_DETECT_USB | \
-						 FSA9480_DETECT_USB_HOST | \
-						 FSA9480_DETECT_CHARGER | \
-						 FSA9480_DETECT_JIG | \
-						 FSA9480_DETECT_UART)
+#define FSA9480_DETECT_ALL		(FSA9480_DETECT_USB | \
+					 FSA9480_DETECT_USB_HOST | \
+					 FSA9480_DETECT_CHARGER | \
+					 FSA9480_DETECT_JIG | \
+					 FSA9480_DETECT_UART | \
+					 FSA9480_DETECT_AV_365K | \
+					 FSA9480_DETECT_AV_365K_CHARGER | \
+					 FSA9480_DETECT_AV_POWERED)
 
 struct fsa9480_detect_set {
 	int	prio;
@@ -58,6 +64,12 @@ struct fsa9480_platform_data {
 
 	struct fsa9480_detect_set	*detect_sets;
 	int				num_sets;
+
+	void				(*mask_vbus_irq)(void);
+	void				(*unmask_vbus_irq)(void);
+	bool				(*vbus_present)(void);
+	int				external_vbus_irq;
+	unsigned long			external_vbus_flags;
 };
 
 #endif

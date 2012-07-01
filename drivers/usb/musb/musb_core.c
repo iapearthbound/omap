@@ -689,7 +689,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		}
 		musb_writew(musb->mregs, MUSB_INTRTXE, musb->epmask);
 		musb_writew(musb->mregs, MUSB_INTRRXE, musb->epmask & 0xfffe);
-		musb_writeb(musb->mregs, MUSB_INTRUSBE, 0xf7);
+		musb_writeb(musb->mregs, MUSB_INTRUSBE, MUSB_INTR_ENABLED);
 #endif
 		musb->port1_status &= ~(USB_PORT_STAT_LOW_SPEED
 					|USB_PORT_STAT_HIGH_SPEED
@@ -922,7 +922,7 @@ void musb_start(struct musb *musb)
 	/*  Set INT enable registers, enable interrupts */
 	musb_writew(regs, MUSB_INTRTXE, musb->epmask);
 	musb_writew(regs, MUSB_INTRRXE, musb->epmask & 0xfffe);
-	musb_writeb(regs, MUSB_INTRUSBE, 0xf7);
+	musb_writeb(regs, MUSB_INTRUSBE, MUSB_INTR_ENABLED);
 
 	musb_writeb(regs, MUSB_TESTMODE, 0);
 
@@ -2048,10 +2048,6 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 	if (!is_otg_enabled(musb) && is_host_enabled(musb)) {
 		struct usb_hcd	*hcd = musb_to_hcd(musb);
 
-		MUSB_HST_MODE(musb);
-		musb->xceiv->default_a = 1;
-		musb->xceiv->state = OTG_STATE_A_IDLE;
-
 		status = usb_add_hcd(musb_to_hcd(musb), -1, 0);
 
 		hcd->self.uses_pio_for_control = 1;
@@ -2063,9 +2059,6 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 				? 'B' : 'A'));
 
 	} else /* peripheral is enabled */ {
-		MUSB_DEV_MODE(musb);
-		musb->xceiv->default_a = 0;
-		musb->xceiv->state = OTG_STATE_B_IDLE;
 
 		status = musb_gadget_setup(musb);
 
@@ -2083,7 +2076,6 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 						"musb_autosuspend_wake_lock");
 
 	pm_runtime_put(musb->controller);
-
 	status = musb_init_debugfs(musb);
 	if (status < 0)
 		goto fail4;

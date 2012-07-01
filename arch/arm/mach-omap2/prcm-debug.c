@@ -1115,17 +1115,15 @@ static struct d_clkd_info cd_cortexa9 = {
 	.intgens = {NULL},
 };
 
-/* CD_L4SEC not in TRM, below based on Linux code. */
-
 static struct d_clkd_info cd_l4sec = {
 	.name = "CD_L4SEC",
 	.prcm_partition	  = OMAP4430_CM2_PARTITION,
 	.cm_inst	  = OMAP4430_CM2_L4PER_INST,
 	.clkdm_offs	  = OMAP4430_CM2_L4PER_L4SEC_CDOFFS,
-	.activity	  = 0x200,
+	.activity	  = 0x300,
 	.mods = {&mod_aes1, &mod_aes2, &mod_des3des, &mod_pkaeip29, &mod_rng,
 		 &mod_sha2md51, &mod_cryptodma, NULL},
-	.intgens = {NULL}, // TBD: No docs
+	.intgens = {NULL},
 };
 
 #if 0 /* Don't appear to be valid */
@@ -1480,6 +1478,8 @@ static void prcmdebug_dump_real_cd(struct seq_file *sf, struct d_clkd_info *cd,
 	u32 clktrctrl =
 		omap4_cminst_read_inst_reg(cd->prcm_partition, cd->cm_inst,
 					   cd->clkdm_offs + OMAP4_CM_CLKSTCTRL);
+	u32 mode = (clktrctrl & OMAP4430_CLKTRCTRL_MASK) >>
+		OMAP4430_CLKTRCTRL_SHIFT;
 	u32 activity = clktrctrl & cd->activity;
 #if 0
 	u32 staticdep =
@@ -1492,9 +1492,10 @@ static void prcmdebug_dump_real_cd(struct seq_file *sf, struct d_clkd_info *cd,
 	int i;
 #endif
 
-	d_pr(sf, "      %s mode=%s", cd->name,
-	     cmtrctrl_s[(clktrctrl & OMAP4430_CLKTRCTRL_MASK) >>
-			OMAP4430_CLKTRCTRL_SHIFT]);
+	if (flags & PRCMDEBUG_LASTSLEEP && mode == 3 /* HW_AUTO */)
+		return;
+
+	d_pr(sf, "      %s mode=%s", cd->name, cmtrctrl_s[mode]);
 
 	d_pr_ctd(sf, " activity=0x%x", activity);
 
@@ -1525,7 +1526,7 @@ static void prcmdebug_dump_cd(struct seq_file *sf, struct d_clkd_info *cd,
 
 	if (cd->cm_inst != -1) {
 		prcmdebug_dump_real_cd(sf, cd, flags);
-	} else {
+	} else if (!(flags & PRCMDEBUG_LASTSLEEP)) {
 		d_pr(sf, "      %s\n", cd->name);
 	}
 

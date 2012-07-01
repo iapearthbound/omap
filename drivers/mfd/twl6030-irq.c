@@ -192,8 +192,17 @@ static int twl6030_irq_thread(void *data)
 			}
 		local_irq_enable();
 		}
-		ret = twl_i2c_write(TWL_MODULE_PIH, sts.bytes,
-				REG_INT_STS_A, 3); /* clear INT_STS_A */
+
+		/*
+		 * NOTE:
+		 * Simulation confirms that documentation is wrong w.r.t the
+		 * interrupt status clear operation. A single *byte* write to
+		 * any one of STS_A to STS_C register results in all three
+		 * STS registers being reset. Since it does not matter which
+		 * value is written, all three registers are cleared on a
+		 * single byte write, so we just use 0x0 to clear.
+		 */
+		ret = twl_i2c_write_u8(TWL_MODULE_PIH, 0x00, REG_INT_STS_A);
 		if (ret)
 			pr_warning("twl6030: I2C error in clearing PIH ISR\n");
 
@@ -229,9 +238,7 @@ static irqreturn_t handle_twl6030_vlow(int irq, void *unused)
 	       2300 + (vbatmin_hi_threshold - 0b110) * 50);
 
 #if 1 /* temporary */
-	pr_err("%s: disabling BAT_VLOW interrupt\n", __func__);
-	disable_irq_nosync(twl6030_irq_base + TWL_VLOW_INTR_OFFSET);
-	WARN_ON(1);
+	WARN_ON_ONCE(1);
 #else
 	pr_emerg("handle_twl6030_vlow: kernel_power_off()\n");
 	kernel_power_off();
